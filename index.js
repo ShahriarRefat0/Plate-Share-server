@@ -24,8 +24,6 @@ app.get("/", (req, res) => {
   res.send("Food Share Server is running");
 });
 
-
-
 async function run() {
   try {
     await client.connect();
@@ -42,24 +40,30 @@ async function run() {
       // console.log(result);
       res.send(result);
     });
-    
-    app.get('/highest-quantity-foods', async (req, res) => {
+
+    app.get("/highest-quantity-foods", async (req, res) => {
       const query = { food_status: "Available" };
       const result = await foodsCollections
         .find(query)
         .sort({ food_quantity: -1 })
         .limit(6)
         .toArray();
-      res.send(result)
-    })
-
+      res.send(result);
+    });
 
     app.get(`/foods/:id`, async (req, res) => {
-      const id = req.params.id
+      const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result = await foodsCollections.findOne(query)
-      res.send(result)
-    })
+      const result = await foodsCollections.findOne(query);
+      res.send(result);
+    });
+
+    app.post("/foods", async (req, res) => {
+      const newFood = req.body;
+      const result = await foodsCollections.insertOne(newFood);
+      res.send(result);
+    });
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
