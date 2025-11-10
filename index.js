@@ -26,8 +26,29 @@ app.get("/", (req, res) => {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+    //DB collections
+    const plateShareDb = client.db("plate-share-db");
+    const foodsCollections = plateShareDb.collection("foods");
+
+    app.get("/foods", async (req, res) => {
+      const status = req.query.status;
+
+      const query = status ? { food_status: "Available" } : {};
+      const result = await foodsCollections.find(query).toArray();
+      // console.log(result);
+      res.send(result);
+    });
+    
+    app.get('/highest-quantity-foods', async (req, res) => {
+      const query = { food_status: "Available" };
+      const result = await foodsCollections
+        .find(query)
+        .sort({ food_quantity: -1 })
+        .limit(6)
+        .toArray();
+      res.send(result)
+    })
 
     await client.db("admin").command({ ping: 1 });
     console.log(
