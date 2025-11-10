@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 const port = process.env.PORT || 3000;
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 //middle ware
 app.use(cors());
@@ -24,6 +24,8 @@ app.get("/", (req, res) => {
   res.send("Food Share Server is running");
 });
 
+
+
 async function run() {
   try {
     await client.connect();
@@ -31,6 +33,7 @@ async function run() {
     const plateShareDb = client.db("plate-share-db");
     const foodsCollections = plateShareDb.collection("foods");
 
+    //apis here
     app.get("/foods", async (req, res) => {
       const status = req.query.status;
 
@@ -50,6 +53,13 @@ async function run() {
       res.send(result)
     })
 
+
+    app.get(`/foods/:id`, async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) };
+      const result = await foodsCollections.findOne(query)
+      res.send(result)
+    })
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
