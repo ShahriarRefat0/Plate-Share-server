@@ -34,7 +34,6 @@ async function run() {
     //apis here
     app.get("/foods", async (req, res) => {
       const status = req.query.status;
-
       const query = status ? { food_status: "Available" } : {};
       const result = await foodsCollections.find(query).toArray();
       // console.log(result);
@@ -61,9 +60,72 @@ async function run() {
     app.post("/foods", async (req, res) => {
       const newFood = req.body;
       const result = await foodsCollections.insertOne(newFood);
+      console.log(result);
+      res.send(result);
+    });
+
+    //get food by user email
+    app.get("/my-foods", async (req, res) => {
+      const email = req.query.email;
+      let query = {};
+
+      if (email) {
+        query = { "donator.email": email };
+      }
+      const result = await foodsCollections.find(query).toArray();
+      res.send(result);
+    });
+
+
+    app.put("/update-food/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedFood = req.body;
+      const query = { _id: new ObjectId(id) };
+      const update = {
+        $set: {
+          food_name: updatedFood.food_name,
+          food_image: updatedFood.food_image,
+          food_quantity: updatedFood.food_quantity,
+          pickup_location: updatedFood.pickup_location,
+          expire_date: updatedFood.expire_date,
+          additional_notes: updatedFood.additional_notes,
+          donator: updatedFood.donator,
+          food_status: updatedFood.food_status,
+        },
+      };
+      const result = await foodsCollections.updateOne(query, update);
       console.log(result)
       res.send(result);
     });
+
+
+    app.delete(`/delete-food/:id`, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await foodsCollections.deleteOne(query)
+      res.send(result)
+    })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     await client.db("admin").command({ ping: 1 });
     console.log(
