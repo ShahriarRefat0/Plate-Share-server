@@ -30,7 +30,7 @@ async function run() {
     //DB collections
     const plateShareDb = client.db("plate-share-db");
     const foodsCollections = plateShareDb.collection("foods");
-
+    const foodRequestCollections = plateShareDb.collection('food-request')
     //apis here
     app.get("/foods", async (req, res) => {
       const status = req.query.status;
@@ -76,7 +76,7 @@ async function run() {
       res.send(result);
     });
 
-
+//update food info
     app.put("/update-food/:id", async (req, res) => {
       const id = req.params.id;
       const updatedFood = req.body;
@@ -98,14 +98,31 @@ async function run() {
       res.send(result);
     });
 
-
+    //delete food
+    
     app.delete(`/delete-food/:id`, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await foodsCollections.deleteOne(query)
       res.send(result)
     })
+    
+    //request food
 
+    app.post('/food-request', async (req, res) => {
+      const reqInfo = req.body;
+      const result = await foodRequestCollections.insertOne(reqInfo);
+      res.send(result)
+
+    })
+
+    app.get(`/food-request`, async (req, res) => {
+      const food_Id = req.query.food_Id;
+      const query = food_Id ? { food_Id: food_Id } : {};
+      
+      const result = await foodRequestCollections.find(query).toArray();
+      res.send(result);
+    });
 
 
 
