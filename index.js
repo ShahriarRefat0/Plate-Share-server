@@ -117,25 +117,41 @@ async function run() {
     })
 
     app.get(`/food-request`, async (req, res) => {
-      const food_Id = req.query.food_Id;
-      const query = food_Id ? { food_Id: food_Id } : {};
+      const req_foodId = req.query.req_foodId;
+      const donator_email = req.query.donator_email;
+
+
+      let query = {};
+      if (req_foodId && donator_email) {
+        query = { req_foodId: req_foodId, donator_email: donator_email };
+      }
       
-      const result = await foodRequestCollections.find(query).toArray();
-      res.send(result);
+
+    const result = await foodRequestCollections.find(query).toArray();
+    res.send(result);
+
     });
 
 
+    //request status api
+    app.put('/update-request/:id', async (req, res) => {
+      const id = req.params.id;
+      const { foodId, status } = req.body;
 
+      const result = await foodRequestCollections.updateOne(
+        { _id: new ObjectId(id) },
+        {$set: {req_status: status}}
+      )
 
+      if (status === "Accepted") {
+        await foodsCollections.updateOne(
+          { _id: new ObjectId(foodId) },
+          { $set: { food_status: "Donated" } }
+        );
+      }
 
-
-
-
-
-
-
-
-
+      res.send(result)
+    })
 
 
 
