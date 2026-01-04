@@ -8,7 +8,10 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 //middle ware
 app.use(
   cors({
-    origin: ["https://plate-share-client-nu.vercel.app", "http://localhost:5173"],
+    origin: [
+      "https://plate-share-client-nu.vercel.app",
+      "http://localhost:5173",
+    ],
     credentials: true,
   })
 );
@@ -31,65 +34,62 @@ app.get("/", (req, res) => {
 
 async function run() {
   try {
-   // await client.connect();
+    // await client.connect();
     //DB collections
     const plateShareDb = client.db("plate-share-db");
     const foodsCollections = plateShareDb.collection("foods");
     const foodRequestCollections = plateShareDb.collection("food-request");
     //apis here
-  app.get("/foods", async (req, res) => {
-  try {
-    const {
-      limit = 8,
-      skip = 0,
-      status,
-      sort = "expire_date",
-      order = "desc",
-      search = "",
-    } = req.query;
+    app.get("/foods", async (req, res) => {
+      try {
+        const {
+          limit = 8,
+          skip = 0,
+          status,
+          sort = "expire_date",
+          order = "desc",
+          search = "",
+        } = req.query;
 
-    const query = {};
+        const query = {};
 
-    // ✅ Status filter (Available / Donated)
-    if (status) {
-      query.food_status =
-        status.charAt(0).toUpperCase() + status.slice(1);
-    }
+        // ✅ Status filter (Available / Donated)
+        if (status) {
+          query.food_status = status.charAt(0).toUpperCase() + status.slice(1);
+        }
 
-    // ✅ Live Search (food name, location, donor)
-    if (search) {
-      query.$or = [
-        { food_name: { $regex: search, $options: "i" } },
-        { pickup_location: { $regex: search, $options: "i" } },
-        { "donator.name": { $regex: search, $options: "i" } },
-      ];
-    }
+        // ✅ Live Search (food name, location, donor)
+        if (search) {
+          query.$or = [
+            { food_name: { $regex: search, $options: "i" } },
+            { pickup_location: { $regex: search, $options: "i" } },
+            { "donator.name": { $regex: search, $options: "i" } },
+          ];
+        }
 
-    // ✅ Sorting
-    const sortOption = {
-      [sort]: order === "asc" ? 1 : -1,
-    };
+        // ✅ Sorting
+        const sortOption = {
+          [sort]: order === "asc" ? 1 : -1,
+        };
 
-    // ✅ Fetch foods
-    const foods = await foodsCollections
-      .find(query)
-      .sort(sortOption)
-      .skip(Number(skip))
-      .limit(Number(limit))
-      .project({ additional_notes: 0, "donator.email": 0 })
-      .toArray();
+        // ✅ Fetch foods
+        const foods = await foodsCollections
+          .find(query)
+          .sort(sortOption)
+          .skip(Number(skip))
+          .limit(Number(limit))
+          .project({ additional_notes: 0, "donator.email": 0 })
+          .toArray();
 
-    // ✅ Count for pagination
-    const total = await foodsCollections.countDocuments(query);
+        // ✅ Count for pagination
+        const total = await foodsCollections.countDocuments(query);
 
-    res.send({ foods, total });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send({ error: "Internal Server Error" });
-  }
-});
-
-
+        res.send({ foods, total });
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ error: "Internal Server Error" });
+      }
+    });
 
     app.get("/highest-quantity-foods", async (req, res) => {
       const query = { food_status: "Available" };
@@ -154,7 +154,7 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const result = await foodsCollections.deleteOne(query);
       res.send(result);
-    }); 
+    });
 
     //request food
     app.post("/food-request", async (req, res) => {
@@ -203,66 +203,218 @@ async function run() {
       if (userEmail) {
         query = { req_email: userEmail };
       }
-        const result = await foodRequestCollections.find(query).toArray();
-        res.send(result);
+      const result = await foodRequestCollections.find(query).toArray();
+      res.send(result);
     });
-
 
     //delete food request
-        app.delete(`/delete-request-food/:id`, async (req, res) => {
-          const id = req.params.id;
-          const query = { _id: new ObjectId(id) };
-          const result = await foodRequestCollections.deleteOne(query);
-          res.send(result);
-        }); 
-
-
-        //dashboard api
-app.get("/dashboard/summary", async (req, res) => {
-  try {
-    const email = req.query.email;
-    if (!email) return res.status(400).send({ error: "Email required" });
-
-    const totalFoods = await foodsCollections.countDocuments({
-      "donator.email": email,
+    app.delete(`/delete-request-food/:id`, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await foodRequestCollections.deleteOne(query);
+      res.send(result);
     });
 
-    const activeFoods = await foodsCollections.countDocuments({
-      "donator.email": email,
-      food_status: "Available",
-    });
+    //dashboard api
+    // app.get("/dashboard/summary", async (req, res) => {
+    //   try {
+    //     const email = req.query.email;
+    //     if (!email) return res.status(400).send({ error: "Email required" });
 
-    const donatedFoods = await foodsCollections.countDocuments({
-      "donator.email": email,
-      food_status: "Donated",
-    });
+    //     const totalFoods = await foodsCollections.countDocuments({
+    //       "donator.email": email,
+    //     });
 
-    const totalRequests = await foodRequestCollections.countDocuments({
-      donator_email: email,
-    });
+    //     const activeFoods = await foodsCollections.countDocuments({
+    //       "donator.email": email,
+    //       food_status: "Available",
+    //     });
 
-    res.send({
-      totalFoods,
-      activeFoods,
-      donatedFoods,
-      totalRequests,
+    //     const donatedFoods = await foodsCollections.countDocuments({
+    //       "donator.email": email,
+    //       food_status: "Donated",
+    //     });
+
+    //     const totalRequests = await foodRequestCollections.countDocuments({
+    //       donator_email: email,
+    //     });
+
+    //     res.send({
+    //       totalFoods,
+    //       activeFoods,
+    //       donatedFoods,
+    //       totalRequests,
+    //     });
+    //   } catch (err) {
+    //     res.status(500).send({ error: "Dashboard summary failed" });
+    //   }
+    // });
+
+    //     app.get("/dashboard/food-activity", async (req, res) => {
+    //       try {
+    //         const email = req.query.email;
+
+    //         const result = await foodsCollections
+    //           .aggregate([
+    //             { $match: { "donator.email": email } },
+    //             {
+    //               $group: {
+    //                 _id: {
+    //                   $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+    //                 },
+    //                 foods: { $sum: 1 },
+    //               },
+    //             },
+    //             { $sort: { _id: 1 } },
+    //             { $limit: 7 },
+    //           ])
+    //           .toArray();
+
+    //         res.send(result);
+    //       } catch (err) {
+    //         res.status(500).send({ error: "Food activity failed" });
+    //       }
+    //     });
+
+    //     app.get("/dashboard/request-status", async (req, res) => {
+    //       try {
+    //         const email = req.query.email;
+
+    //         const result = await foodRequestCollections
+    //           .aggregate([
+    //             { $match: { donator_email: email } },
+    //             {
+    //               $group: {
+    //                 _id: "$req_status",
+    //                 value: { $sum: 1 },
+    //               },
+    //             },
+    //           ])
+    //           .toArray();
+
+    //         res.send(result);
+    //       } catch (err) {
+    //         res.status(500).send({ error: "Request status failed" });
+    //       }
+    //     });
+
+    //     app.get("/dashboard/recent-requests", async (req, res) => {
+    //       try {
+    //         const email = req.query.email;
+
+    //         const result = await foodRequestCollections
+    //           .find({ donator_email: email })
+    //           .sort({ _id: -1 })
+    //           .limit(5)
+    //           .toArray();
+
+    //         res.send(result);
+    //       } catch (err) {
+    //         res.status(500).send({ error: "Recent requests failed" });
+    //       }
+    //     });
+
+    //dashboard api - FIXED VERSION
+    app.get("/dashboard/summary", async (req, res) => {
+      try {
+        const email = req.query.email;
+        if (!email) return res.status(400).send({ error: "Email required" });
+
+        const totalFoods = await foodsCollections.countDocuments({
+          "donator.email": email,
+        });
+
+        const activeFoods = await foodsCollections.countDocuments({
+          "donator.email": email,
+          food_status: "Available",
+        });
+
+        const donatedFoods = await foodsCollections.countDocuments({
+          "donator.email": email,
+          food_status: "Donated",
+        });
+
+        const totalRequests = await foodRequestCollections.countDocuments({
+          donator_email: email,
+        });
+        
+        console.log("Dashboard Summary:", {
+          totalFoods,
+          activeFoods,
+          donatedFoods,
+          totalRequests,
+        });
+
+        res.send({
+          totalFoods,
+          activeFoods,
+          donatedFoods,
+          totalRequests,
+        });
+      } catch (err) {
+        console.error("Dashboard summary error:", err);
+        res
+          .status(500)
+          .send({ error: "Dashboard summary failed", details: err.message });
+      }
     });
-  } catch (err) {
-    res.status(500).send({ error: "Dashboard summary failed" });
-  }
-});
 
     app.get("/dashboard/food-activity", async (req, res) => {
       try {
         const email = req.query.email;
+        if (!email) return res.status(400).send({ error: "Email required" });
 
+        // Check if createdAt field exists, if not use alternative approach
+        const sampleDoc = await foodsCollections.findOne({
+          "donator.email": email,
+        });
+
+        if (!sampleDoc || !sampleDoc.createdAt) {
+          // Fallback: return dummy data or use _id timestamp
+          const result = await foodsCollections
+            .aggregate([
+              { $match: { "donator.email": email } },
+              {
+                $addFields: {
+                  dateFromId: { $toDate: "$_id" },
+                },
+              },
+              {
+                $group: {
+                  _id: {
+                    $dateToString: { format: "%Y-%m-%d", date: "$dateFromId" },
+                  },
+                  foods: { $sum: 1 },
+                },
+              },
+              { $sort: { _id: 1 } },
+              { $limit: 7 },
+            ])
+            .toArray();
+
+          console.log("Food Activity (from _id):", result);
+          return res.send(result);
+        }
+
+        // If createdAt exists, ensure it's a Date object
         const result = await foodsCollections
           .aggregate([
             { $match: { "donator.email": email } },
             {
+              $addFields: {
+                createdAtDate: {
+                  $cond: {
+                    if: { $eq: [{ $type: "$createdAt" }, "string"] },
+                    then: { $toDate: "$createdAt" },
+                    else: "$createdAt",
+                  },
+                },
+              },
+            },
+            {
               $group: {
                 _id: {
-                  $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+                  $dateToString: { format: "%Y-%m-%d", date: "$createdAtDate" },
                 },
                 foods: { $sum: 1 },
               },
@@ -272,15 +424,20 @@ app.get("/dashboard/summary", async (req, res) => {
           ])
           .toArray();
 
+        console.log("Food Activity:", result);
         res.send(result);
       } catch (err) {
-        res.status(500).send({ error: "Food activity failed" });
+        console.error("Food activity error:", err);
+        res
+          .status(500)
+          .send({ error: "Food activity failed", details: err.message });
       }
     });
 
     app.get("/dashboard/request-status", async (req, res) => {
       try {
         const email = req.query.email;
+        if (!email) return res.status(400).send({ error: "Email required" });
 
         const result = await foodRequestCollections
           .aggregate([
@@ -294,15 +451,20 @@ app.get("/dashboard/summary", async (req, res) => {
           ])
           .toArray();
 
+        console.log("Request Status:", result);
         res.send(result);
       } catch (err) {
-        res.status(500).send({ error: "Request status failed" });
+        console.error("Request status error:", err);
+        res
+          .status(500)
+          .send({ error: "Request status failed", details: err.message });
       }
     });
 
     app.get("/dashboard/recent-requests", async (req, res) => {
       try {
         const email = req.query.email;
+        if (!email) return res.status(400).send({ error: "Email required" });
 
         const result = await foodRequestCollections
           .find({ donator_email: email })
@@ -310,12 +472,15 @@ app.get("/dashboard/summary", async (req, res) => {
           .limit(5)
           .toArray();
 
+        console.log("Recent Requests:", result);
         res.send(result);
       } catch (err) {
-        res.status(500).send({ error: "Recent requests failed" });
+        console.error("Recent requests error:", err);
+        res
+          .status(500)
+          .send({ error: "Recent requests failed", details: err.message });
       }
     });
-
 
     //await client.db("admin").command({ ping: 1 });
     console.log(
