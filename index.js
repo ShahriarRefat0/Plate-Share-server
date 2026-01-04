@@ -8,8 +8,8 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 //middle ware
 app.use(
   cors({
-    origin:
-      "http://localhost:5173" || "https://plate-share-client-nu.vercel.app/",
+    origin: ["https://plate-share-client-nu.vercel.app", "http://localhost:5173"],
+    credentials: true,
   })
 );
 app.use(express.json());
